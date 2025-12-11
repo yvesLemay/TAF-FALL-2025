@@ -1,5 +1,5 @@
+<img width="311" height="267" alt="image" src="https://github.com/user-attachments/assets/c673664b-b2a5-4699-ae97-f2003a59e629" />
 
-![Logo taf](./logo_taf.png)
 
 # Test Automation Framework
 

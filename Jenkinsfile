@@ -43,7 +43,6 @@ pipeline {
 
           # Vérifie que c'est bien un zip (debug utile)
           ls -lh codeql.zip
-          file codeql.zip
           head -c 200 codeql.zip || true
 
           rm -rf "${CODEQL_DIR}"

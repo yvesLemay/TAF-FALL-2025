@@ -79,13 +79,20 @@ pipeline {
       steps {
         sh '''
           set -eux
-          rm -rf codeql-db-java codeql-db-js *.sarif
+          rm -rf codeql-db-java codeql-db-js codeql-*.sarif
 
-          # --- Java
+          # --- JAVA : CodeQL doit tracer une compilation
           "${CODEQL_DIR}/codeql" database create codeql-db-java \
             --language=java \
             --source-root . \
-            --command="bash -lc 'true'"
+            --command="bash -lc '
+              for d in auth gateway registry user; do
+                if [ -x \"$d/gradlew\" ]; then
+                  echo \"== CodeQL trace Gradle in $d ==\"
+                  (cd \"$d\" && ./gradlew --no-daemon clean compileJava)   # <- IMPORTANT
+                fi
+              done
+            '"
 
           "${CODEQL_DIR}/codeql" database analyze codeql-db-java \
             java-security-and-quality \
@@ -93,7 +100,7 @@ pipeline {
             --output=codeql-java.sarif \
             --threads=0
 
-          # --- JavaScript
+          # --- JAVASCRIPT : pas besoin de build
           "${CODEQL_DIR}/codeql" database create codeql-db-js \
             --language=javascript \
             --source-root . \
@@ -107,6 +114,7 @@ pipeline {
         '''
       }
     }
+
 
 
     stage('Archive SARIF') {

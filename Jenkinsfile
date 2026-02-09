@@ -4,7 +4,6 @@ pipeline {
   environment {
     CODEQL_VERSION = "2.24.1"
     CODEQL_DIR = "${WORKSPACE}/codeql"
-    // Mémoire disponible pour CodeQL (en MB)
     CODEQL_RAM = "4096"
   }
   stages {
@@ -24,6 +23,27 @@ pipeline {
           unzip -v | head -n 1
           node --version || true
           npm --version || true
+        '''
+      }
+    }
+    stage('Install Node.js') {
+      steps {
+        sh '''
+          set -eux
+          # Vérifier si Node.js est déjà installé
+          if command -v node > /dev/null 2>&1; then
+            echo "Node.js is already installed: $(node --version)"
+            echo "npm version: $(npm --version)"
+          else
+            echo "Installing Node.js..."
+            # Télécharger et installer Node.js 20.x LTS
+            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
+            apt-get install -y nodejs
+            
+            # Vérifier l'installation
+            node --version
+            npm --version
+          fi
         '''
       }
     }
@@ -83,7 +103,7 @@ pipeline {
           set -eux
           rm -rf codeql-db-java codeql-db-js codeql-*.sarif
           
-          # Créer un script de build pour CodeQL
+          # Créer un script de build pour CodeQL Java
           cat > codeql-build-java.sh << 'EOF'
 #!/bin/bash
 set -eux
@@ -97,6 +117,7 @@ EOF
           chmod +x codeql-build-java.sh
           
           # --- JAVA (tracer la compilation)
+          echo "=== Creating Java database ==="
           "${CODEQL_DIR}/codeql" database create codeql-db-java \
             --language=java \
             --source-root . \
@@ -110,18 +131,28 @@ EOF
             --ram=${CODEQL_RAM} \
             --threads=0
           
-          # --- JAVASCRIPT (pas besoin de build)
+          echo "=== Java analysis complete ==="
+          ls -lh codeql-java.sarif
+          
+          # --- JAVASCRIPT/TYPESCRIPT (analyse statique)
+          echo "=== Creating JavaScript/TypeScript database ==="
           "${CODEQL_DIR}/codeql" database create codeql-db-js \
             --language=javascript \
             --source-root .
           
-          echo "=== Analyzing JavaScript with ${CODEQL_RAM}MB RAM ==="
+          echo "=== Analyzing JavaScript/TypeScript with ${CODEQL_RAM}MB RAM ==="
           "${CODEQL_DIR}/codeql" database analyze codeql-db-js \
             codeql/javascript-queries:codeql-suites/javascript-security-and-quality.qls \
             --format=sarifv2.1.0 \
             --output=codeql-js.sarif \
             --ram=${CODEQL_RAM} \
             --threads=0
+          
+          echo "=== JavaScript/TypeScript analysis complete ==="
+          ls -lh codeql-js.sarif
+          
+          echo "=== All analyses complete ==="
+          ls -lh codeql-*.sarif
         '''
       }
     }

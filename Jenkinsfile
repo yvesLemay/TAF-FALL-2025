@@ -5,6 +5,8 @@ pipeline {
     CODEQL_VERSION = "2.24.1"
     CODEQL_DIR = "${WORKSPACE}/codeql"
     CODEQL_RAM = "4096"
+    NODE_VERSION = "20.18.1"
+    NODE_DIR = "${WORKSPACE}/node"
   }
   stages {
     stage('Checkout') {
@@ -30,20 +32,34 @@ pipeline {
       steps {
         sh '''
           set -eux
-          # Vérifier si Node.js est déjà installé
-          if command -v node > /dev/null 2>&1; then
-            echo "Node.js is already installed: $(node --version)"
-            echo "npm version: $(npm --version)"
+          # Vérifier si Node.js est déjà installé dans le workspace
+          if [ -x "${NODE_DIR}/bin/node" ]; then
+            echo "Node.js is already installed in workspace: $(${NODE_DIR}/bin/node --version)"
           else
-            echo "Installing Node.js..."
-            # Télécharger et installer Node.js 20.x LTS
-            curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-            apt-get install -y nodejs
+            echo "Installing Node.js ${NODE_VERSION}..."
             
-            # Vérifier l'installation
-            node --version
-            npm --version
+            # Télécharger Node.js (binaire Linux x64)
+            rm -f node.tar.xz
+            curl -fL --retry 5 --retry-delay 2 \
+              -o node.tar.xz \
+              "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz"
+            
+            # Vérifier le téléchargement
+            ls -lh node.tar.xz
+            
+            # Extraire
+            rm -rf "${NODE_DIR}"
+            mkdir -p "${NODE_DIR}"
+            tar -xJf node.tar.xz -C "${NODE_DIR}" --strip-components=1
+            
+            # Nettoyer
+            rm -f node.tar.xz
           fi
+          
+          # Ajouter Node.js au PATH et vérifier
+          export PATH="${NODE_DIR}/bin:$PATH"
+          echo "Node.js version: $(node --version)"
+          echo "npm version: $(npm --version)"
         '''
       }
     }
@@ -101,6 +117,10 @@ pipeline {
       steps {
         sh '''
           set -eux
+          
+          # Ajouter Node.js au PATH pour CodeQL
+          export PATH="${NODE_DIR}/bin:$PATH"
+          
           rm -rf codeql-db-java codeql-db-js codeql-*.sarif
           
           # Créer un script de build pour CodeQL Java

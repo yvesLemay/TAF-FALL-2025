@@ -17,10 +17,20 @@ pipeline {
       steps {
         sh '''
           set -eux
+          export DEBIAN_FRONTEND=noninteractive
+          
           apt-get update
-          # Java + outils de base (node facultatif pour CodeQL JS)
-          apt-get install -y curl unzip git jq openjdk-17-jdk
+          apt-get install -y --no-install-recommends \
+            curl \
+            unzip \
+            jq \
+            ca-certificates \
+            git \
+            openjdk-17-jdk
+          
           java -version
+          javac -version
+
         '''
       }
     }

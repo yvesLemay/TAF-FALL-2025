@@ -3,7 +3,6 @@ pipeline {
   options { timestamps() }
 
   environment {
-    // Version CodeQL CLI (tu peux la changer)
     CODEQL_VERSION = "2.29.2"
     CODEQL_DIR = "${WORKSPACE}/codeql"
   }
@@ -13,27 +12,28 @@ pipeline {
       steps { checkout scm }
     }
 
-  stage('Install prerequisites') {
-    steps {
-      sh '''
-        set -eux
-        whoami
-        id
-      '''
-      sh '''
-        set -eux
-        su -c "apt-get update" root
-        su -c "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl unzip jq ca-certificates git openjdk-17-jdk" root
-        java -version || true
-        javac -version || true
-      '''
+    stage('Verify toolchain') {
+      steps {
+        sh '''
+          set -eux
+          whoami
+          id
+          java -version
+          javac -version
+          git --version
+          curl --version
+          unzip -v | head -n 1
+          node --version || true
+          npm --version || true
+        '''
+      }
     }
-  }
 
     stage('Download CodeQL CLI') {
       steps {
         sh '''
           set -eux
+          rm -f codeql.zip
           curl -L -o codeql.zip https://github.com/github/codeql-cli-binaries/releases/download/v${CODEQL_VERSION}/codeql-linux64.zip
           rm -rf "${CODEQL_DIR}"
           unzip -q codeql.zip -d "${WORKSPACE}"
@@ -43,7 +43,7 @@ pipeline {
       }
     }
 
-    stage('Build Java (best effort)') {
+    stage('Build (best effort)') {
       steps {
         sh '''
           set -eux
@@ -56,7 +56,7 @@ pipeline {
             fi
           done
 
-          # Maven wrappers (on build ce qu'on trouve)
+          # Maven wrappers
           for w in $(find . -maxdepth 4 -name mvnw -type f); do
             d=$(dirname "$w")
             echo "== Maven build in $d =="
@@ -72,12 +72,10 @@ pipeline {
           set -eux
           rm -rf codeql-db codeql-results.sarif
 
-          # Crée une DB multi-lang. On fournit une "commande build" légère;
-          # les builds au stage précédent ont déjà fait le gros du travail.
           "${CODEQL_DIR}/codeql" database create codeql-db \
             --language=java,javascript \
             --source-root . \
-            --command="true"
+            --command="bash -lc 'true'"
 
           "${CODEQL_DIR}/codeql" database analyze codeql-db \
             --format=sarifv2.1.0 \
@@ -92,21 +90,12 @@ pipeline {
         archiveArtifacts artifacts: 'codeql-results.sarif', fingerprint: true
       }
     }
+  }
 
-    // Optionnel: upload vers GitHub Code Scanning (si ton PAT a security_events)
-    /*
-    stage('Upload SARIF to GitHub') {
-      steps {
-        withCredentials([string(credentialsId: 'github_pat', variable: 'GH_PAT')]) {
-          sh '''
-            set -eux
-            # À adapter: owner/repo + SHA du commit
-            # GitHub API SARIF upload: demande un endpoint spécifique et du base64 gzippé.
-            # Si tu veux l’activer, dis-moi ton owner/repo et je te mets la commande exacte.
-          '''
-        }
-      }
+  post {
+    always {
+      // utile si le pipeline plante après avoir créé des fichiers
+      archiveArtifacts artifacts: 'codeql.zip', allowEmptyArchive: true
     }
-    */
   }
 }

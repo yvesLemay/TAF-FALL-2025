@@ -79,27 +79,42 @@ pipeline {
       steps {
         sh '''
           set -eux
-          rm -rf codeql-db codeql-results.sarif
+          rm -rf codeql-db-java codeql-db-js *.sarif
 
-          "${CODEQL_DIR}/codeql" database create codeql-db \
-            --language=java,javascript \
+          # --- Java
+          "${CODEQL_DIR}/codeql" database create codeql-db-java \
+            --language=java \
             --source-root . \
             --command="bash -lc 'true'"
 
-          "${CODEQL_DIR}/codeql" database analyze codeql-db \
+          "${CODEQL_DIR}/codeql" database analyze codeql-db-java \
+            java-security-and-quality \
             --format=sarifv2.1.0 \
-            --output=codeql-results.sarif \
+            --output=codeql-java.sarif \
+            --threads=0
+
+          # --- JavaScript
+          "${CODEQL_DIR}/codeql" database create codeql-db-js \
+            --language=javascript \
+            --source-root . \
+            --command="bash -lc 'true'"
+
+          "${CODEQL_DIR}/codeql" database analyze codeql-db-js \
+            javascript-security-and-quality \
+            --format=sarifv2.1.0 \
+            --output=codeql-js.sarif \
             --threads=0
         '''
       }
     }
 
+
     stage('Archive SARIF') {
       steps {
-        archiveArtifacts artifacts: 'codeql-results.sarif', fingerprint: true
+        archiveArtifacts artifacts: 'codeql-*.sarif', fingerprint: true
       }
     }
-  }
+
 
   post {
     always {

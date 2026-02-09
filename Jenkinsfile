@@ -81,15 +81,15 @@ pipeline {
           set -eux
           rm -rf codeql-db-java codeql-db-js codeql-*.sarif
 
-          # --- JAVA : CodeQL doit tracer une compilation
+          # --- JAVA (il faut tracer une compilation)
           "${CODEQL_DIR}/codeql" database create codeql-db-java \
             --language=java \
             --source-root . \
             --command="bash -lc '
               for d in auth gateway registry user; do
-                if [ -x \"$d/gradlew\" ]; then
-                  echo \"== CodeQL trace Gradle in $d ==\"
-                  (cd \"$d\" && ./gradlew --no-daemon clean compileJava)   # <- IMPORTANT
+                if [ -x \"\$d/gradlew\" ]; then
+                  echo \"== CodeQL trace Gradle in \$d ==\"
+                  (cd \"\$d\" && ./gradlew --no-daemon clean compileJava)
                 fi
               done
             '"
@@ -100,7 +100,7 @@ pipeline {
             --output=codeql-java.sarif \
             --threads=0
 
-          # --- JAVASCRIPT : pas besoin de build
+          # --- JAVASCRIPT (pas besoin de build)
           "${CODEQL_DIR}/codeql" database create codeql-db-js \
             --language=javascript \
             --source-root . \
@@ -114,6 +114,7 @@ pipeline {
         '''
       }
     }
+
 
 
 

@@ -17,9 +17,9 @@ pipeline {
       steps {
         sh '''
           set -eux
-          sudo apt-get update
+          apt-get update
           # Java + outils de base (node facultatif pour CodeQL JS)
-          sudo apt-get install -y curl unzip git jq openjdk-17-jdk
+          apt-get install -y curl unzip git jq openjdk-17-jdk
           java -version
         '''
       }

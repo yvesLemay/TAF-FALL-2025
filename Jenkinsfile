@@ -41,6 +41,20 @@ pipeline {
         '''
       }
     }
+    stage('Download CodeQL Query Packs') {
+      steps {
+        sh '''
+          set -eux
+          # Télécharger les query packs depuis GitHub
+          "${CODEQL_DIR}/codeql" pack download codeql/java-queries
+          "${CODEQL_DIR}/codeql" pack download codeql/javascript-queries
+          
+          # Vérifier les packs disponibles
+          "${CODEQL_DIR}/codeql" resolve packs
+          "${CODEQL_DIR}/codeql" resolve languages
+        '''
+      }
+    }
     stage('Build (best effort)') {
       steps {
         sh '''
@@ -87,7 +101,7 @@ EOF
             --command=./codeql-build-java.sh
           
           "${CODEQL_DIR}/codeql" database analyze codeql-db-java \
-            java-security-and-quality \
+            codeql/java-queries:codeql-suites/java-security-and-quality.qls \
             --format=sarifv2.1.0 \
             --output=codeql-java.sarif \
             --threads=0
@@ -98,7 +112,7 @@ EOF
             --source-root .
           
           "${CODEQL_DIR}/codeql" database analyze codeql-db-js \
-            javascript-security-and-quality \
+            codeql/javascript-queries:codeql-suites/javascript-security-and-quality.qls \
             --format=sarifv2.1.0 \
             --output=codeql-js.sarif \
             --threads=0

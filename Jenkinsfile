@@ -30,11 +30,9 @@ pipeline {
         sh '''
           set -eux
           rm -f codeql.zip
-          # Télécharge et échoue si HTTP != 200
           curl -fL --retry 5 --retry-delay 2 \
             -o codeql.zip \
             "https://github.com/github/codeql-cli-binaries/releases/download/v${CODEQL_VERSION}/codeql-linux64.zip"
-          # Vérifie que c'est bien un zip (debug utile)
           ls -lh codeql.zip
           head -c 200 codeql.zip || true
           rm -rf "${CODEQL_DIR}"
@@ -69,18 +67,24 @@ pipeline {
           set -eux
           rm -rf codeql-db-java codeql-db-js codeql-*.sarif
           
-          # --- JAVA (il faut tracer une compilation)
+          # Créer un script de build pour CodeQL
+          cat > codeql-build-java.sh << 'EOF'
+#!/bin/bash
+set -eux
+for dir in auth gateway registry user; do
+  if [ -x "${dir}/gradlew" ]; then
+    echo "== CodeQL trace Gradle in ${dir} =="
+    (cd "${dir}" && ./gradlew --no-daemon clean compileJava)
+  fi
+done
+EOF
+          chmod +x codeql-build-java.sh
+          
+          # --- JAVA (tracer la compilation)
           "${CODEQL_DIR}/codeql" database create codeql-db-java \
             --language=java \
             --source-root . \
-            --command='bash -c "
-              for dir in auth gateway registry user; do
-                if [ -x \\"\\${dir}/gradlew\\" ]; then
-                  echo \\"== CodeQL trace Gradle in \\${dir} ==\\"
-                  (cd \\"\\${dir}\\" && ./gradlew --no-daemon clean compileJava)
-                fi
-              done
-            "'
+            --command=./codeql-build-java.sh
           
           "${CODEQL_DIR}/codeql" database analyze codeql-db-java \
             java-security-and-quality \
@@ -91,8 +95,7 @@ pipeline {
           # --- JAVASCRIPT (pas besoin de build)
           "${CODEQL_DIR}/codeql" database create codeql-db-js \
             --language=javascript \
-            --source-root . \
-            --command='true'
+            --source-root .
           
           "${CODEQL_DIR}/codeql" database analyze codeql-db-js \
             javascript-security-and-quality \

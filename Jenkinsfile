@@ -3,7 +3,7 @@ pipeline {
   options { timestamps() }
 
   environment {
-    CODEQL_VERSION = "2.29.2"
+    CODEQL_VERSION = "2.24.1"
     CODEQL_DIR = "${WORKSPACE}/codeql"
   }
 

@@ -114,12 +114,12 @@ pipeline {
         archiveArtifacts artifacts: 'codeql-*.sarif', fingerprint: true
       }
     }
-
+  } // <-- FIN stages
 
   post {
     always {
       // utile si le pipeline plante après avoir créé des fichiers
-      archiveArtifacts artifacts: 'codeql.zip', allowEmptyArchive: true
+      archiveArtifacts artifacts: 'codeql.zip, codeql-*.sarif', allowEmptyArchive: true
     }
   }
-}
+} // <-- FIN pipeline

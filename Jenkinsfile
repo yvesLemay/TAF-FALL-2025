@@ -38,22 +38,22 @@ pipeline {
           else
             echo "Installing Node.js ${NODE_VERSION}..."
             
-            # Télécharger Node.js (binaire Linux x64)
-            rm -f node.tar.xz
+            # Télécharger Node.js (binaire Linux x64) en format tar.gz au lieu de tar.xz
+            rm -f node.tar.gz
             curl -fL --retry 5 --retry-delay 2 \
-              -o node.tar.xz \
-              "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.xz"
+              -o node.tar.gz \
+              "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz"
             
             # Vérifier le téléchargement
-            ls -lh node.tar.xz
+            ls -lh node.tar.gz
             
-            # Extraire
+            # Extraire (tar.gz au lieu de tar.xz)
             rm -rf "${NODE_DIR}"
             mkdir -p "${NODE_DIR}"
-            tar -xJf node.tar.xz -C "${NODE_DIR}" --strip-components=1
+            tar -xzf node.tar.gz -C "${NODE_DIR}" --strip-components=1
             
             # Nettoyer
-            rm -f node.tar.xz
+            rm -f node.tar.gz
           fi
           
           # Ajouter Node.js au PATH et vérifier

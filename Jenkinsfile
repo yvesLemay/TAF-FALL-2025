@@ -4,6 +4,8 @@ pipeline {
   environment {
     CODEQL_VERSION = "2.24.1"
     CODEQL_DIR = "${WORKSPACE}/codeql"
+    // Mémoire disponible pour CodeQL (en MB)
+    CODEQL_RAM = "4096"
   }
   stages {
     stage('Checkout') {
@@ -100,10 +102,12 @@ EOF
             --source-root . \
             --command=./codeql-build-java.sh
           
+          echo "=== Analyzing Java with ${CODEQL_RAM}MB RAM ==="
           "${CODEQL_DIR}/codeql" database analyze codeql-db-java \
             codeql/java-queries:codeql-suites/java-security-and-quality.qls \
             --format=sarifv2.1.0 \
             --output=codeql-java.sarif \
+            --ram=${CODEQL_RAM} \
             --threads=0
           
           # --- JAVASCRIPT (pas besoin de build)
@@ -111,10 +115,12 @@ EOF
             --language=javascript \
             --source-root .
           
+          echo "=== Analyzing JavaScript with ${CODEQL_RAM}MB RAM ==="
           "${CODEQL_DIR}/codeql" database analyze codeql-db-js \
             codeql/javascript-queries:codeql-suites/javascript-security-and-quality.qls \
             --format=sarifv2.1.0 \
             --output=codeql-js.sarif \
+            --ram=${CODEQL_RAM} \
             --threads=0
         '''
       }

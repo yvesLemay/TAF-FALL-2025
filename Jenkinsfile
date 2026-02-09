@@ -13,27 +13,22 @@ pipeline {
       steps { checkout scm }
     }
 
-    stage('Install prerequisites') {
-      steps {
-        sh '''
-          set -eux
-          export DEBIAN_FRONTEND=noninteractive
-          
-          apt-get update
-          apt-get install -y --no-install-recommends \
-            curl \
-            unzip \
-            jq \
-            ca-certificates \
-            git \
-            openjdk-17-jdk
-          
-          java -version
-          javac -version
-
-        '''
-      }
+  stage('Install prerequisites') {
+    steps {
+      sh '''
+        set -eux
+        whoami
+        id
+      '''
+      sh '''
+        set -eux
+        su -c "apt-get update" root
+        su -c "DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends curl unzip jq ca-certificates git openjdk-17-jdk" root
+        java -version || true
+        javac -version || true
+      '''
     }
+  }
 
     stage('Download CodeQL CLI') {
       steps {

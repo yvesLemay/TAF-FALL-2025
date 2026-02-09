@@ -30,30 +30,28 @@ pipeline {
     }
 
     stage('Download CodeQL CLI') {
-  steps {
-    sh '''
-      set -eux
+      steps {
+        sh '''
+          set -eux
 
-      rm -f codeql.zip
+          rm -f codeql.zip
 
-      # Télécharge et échoue si HTTP != 200
-      curl -fL --retry 5 --retry-delay 2 \
-        -o codeql.zip \
-        "https://github.com/github/codeql-cli-binaries/releases/download/v${CODEQL_VERSION}/codeql-linux64.zip"
+          # Télécharge et échoue si HTTP != 200
+          curl -fL --retry 5 --retry-delay 2 \
+            -o codeql.zip \
+            "https://github.com/github/codeql-cli-binaries/releases/download/v${CODEQL_VERSION}/codeql-linux64.zip"
 
-      # Vérifie que c'est bien un zip (debug utile)
-      ls -lh codeql.zip
-      file codeql.zip
-      head -c 200 codeql.zip || true
+          # Vérifie que c'est bien un zip (debug utile)
+          ls -lh codeql.zip
+          file codeql.zip
+          head -c 200 codeql.zip || true
 
-      rm -rf "${CODEQL_DIR}"
-      unzip -q codeql.zip -d "${WORKSPACE}"
-      mv "${WORKSPACE}/codeql" "${CODEQL_DIR}"
-      "${CODEQL_DIR}/codeql" version
-    '''
-  }
-}
-
+          rm -rf "${CODEQL_DIR}"
+          unzip -q codeql.zip -d "${WORKSPACE}"
+          mv "${WORKSPACE}/codeql" "${CODEQL_DIR}"
+          "${CODEQL_DIR}/codeql" version
+        '''
+      }
     }
 
     stage('Build (best effort)') {

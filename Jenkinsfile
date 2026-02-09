@@ -47,7 +47,6 @@ pipeline {
 
           rm -rf "${CODEQL_DIR}"
           unzip -q codeql.zip -d "${WORKSPACE}"
-          mv "${WORKSPACE}/codeql" "${CODEQL_DIR}"
           "${CODEQL_DIR}/codeql" version
         '''
       }

@@ -305,7 +305,7 @@ PYTHON_EOF
       echo "✅ Pipeline completed successfully - CodeQL quality gate passed"
     }
     failure {
-      echo "❌ Pipeline failed - Check CodeQL quality gate results above"
+      echo "❌ Pipeline failed - Check CodeQL quality gate results above and fix issues before merging to main/master/production"
     }
   }
 }

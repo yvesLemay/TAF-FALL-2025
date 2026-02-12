@@ -311,28 +311,51 @@ PYTHON_EOF
       }
     }
     stage('Deploy to TAF') {
-      when { branch 'main' }
+      when { 
+        anyOf {
+          branch 'main'
+          branch 'demo/pr'
+        }
+      }
       steps {
-        sh '''
-          set -eux
-          TAF_HOST="172.31.21.242"
-          TAF_USER="ubuntu"
-
-          mkdir -p /var/jenkins_home/.ssh
-          chmod 700 /var/jenkins_home/.ssh
-          ssh-keyscan -H "${TAF_HOST}" >> /var/jenkins_home/.ssh/known_hosts
-
-          ssh ${TAF_USER}@${TAF_HOST} "
+        script {
+          def TAF_HOST = '172.31.21.242'
+          def TAF_USER = 'ubuntu'
+          def DEPLOY_BRANCH = env.BRANCH_NAME
+          
+          sh """
             set -eux
-            cd ~/TAF-FALL-2025
-            git pull
-            if [ -f docker-compose-local-test.yml ]; then
-              docker compose -f docker-compose-local-test.yml up -d --build
-            else
-              docker compose up -d --build
-            fi
-          "
-        '''
+            
+            # Ensure .ssh directory exists with correct permissions
+            mkdir -p /var/jenkins_home/.ssh
+            chmod 700 /var/jenkins_home/.ssh
+            
+            # Add TAF host to known_hosts
+            ssh-keyscan -H ${TAF_HOST} >> /var/jenkins_home/.ssh/known_hosts 2>/dev/null || true
+            
+            # Deploy to TAF server - checkout specific branch
+            ssh ${TAF_USER}@${TAF_HOST} << 'ENDSSH'
+              set -eux
+              cd ~/TAF-FALL-2025
+              
+              # Fetch all updates
+              git fetch --all
+              
+              # Checkout and pull the specific branch being deployed
+              git checkout ${DEPLOY_BRANCH} 2>/dev/null || git checkout -b ${DEPLOY_BRANCH} origin/${DEPLOY_BRANCH}
+              git pull origin ${DEPLOY_BRANCH}
+              
+              # Deploy with docker compose
+              if [ -f docker-compose-local-test.yml ]; then
+                docker compose -f docker-compose-local-test.yml up -d --build
+              else
+                docker compose up -d --build
+              fi
+ENDSSH
+            
+            echo "✅ Deployed branch ${DEPLOY_BRANCH} to TAF server"
+          """
+        }
       }
     }
   }

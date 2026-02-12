@@ -7,11 +7,17 @@ pipeline {
     CODEQL_RAM = "4096"
     NODE_VERSION = "20.18.1"
     NODE_DIR = "${WORKSPACE}/node"
+    JAVA_HOME = "/opt/jdk21"
+    PATH = "${JAVA_HOME}/bin:${PATH}"
     
     // Quality Gate thresholds
     MAX_CRITICAL_ISSUES = "0"
     MAX_HIGH_ISSUES = "5"
     MAX_MEDIUM_ISSUES = "20"
+
+    // Aide Gradle Toolchains à détecter le JDK
+    GRADLE_OPTS = "-Dorg.gradle.java.installations.auto-detect=true -Dorg.gradle.java.installations.paths=/opt/jdk21 -Dorg.gradle.java.installations.fromEnv=JAVA_HOME,JAVA21_HOME"
+
   }
   stages {
     stage('Checkout') {
@@ -88,6 +94,14 @@ pipeline {
       steps {
         sh '''
           set -eux
+          export JAVA_HOME="/opt/jdk21"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          echo "JAVA_HOME=$JAVA_HOME"
+          which java
+          java -version
+          which javac
+          javac -version
+
           for d in auth gateway registry user; do
             if [ -x "$d/gradlew" ]; then
               echo "== Gradle build in $d =="
@@ -110,15 +124,24 @@ pipeline {
           rm -rf codeql-db-java codeql-db-js codeql-*.sarif
           
           cat > codeql-build-java.sh << 'EOF'
-#!/bin/bash
-set -eux
-for dir in auth gateway registry user; do
-  if [ -x "${dir}/gradlew" ]; then
-    echo "== CodeQL trace Gradle in ${dir} =="
-    (cd "${dir}" && ./gradlew --no-daemon clean compileJava)
-  fi
-done
-EOF
+          #!/usr/bin/env bash
+          set -eux
+
+          export JAVA_HOME="/opt/jdk21"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          export GRADLE_OPTS="-Dorg.gradle.java.installations.auto-detect=true -Dorg.gradle.java.installations.paths=/opt/jdk21 -Dorg.gradle.java.installations.fromEnv=JAVA_HOME,JAVA21_HOME"
+
+          echo "JAVA_HOME=$JAVA_HOME"
+          java -version
+          javac -version
+
+          for dir in auth gateway registry user; do
+            if [ -x "${dir}/gradlew" ]; then
+              echo "== CodeQL trace Gradle in ${dir} =="
+              (cd "${dir}" && ./gradlew --no-daemon clean compileJava)
+            fi
+          done
+          EOF
           chmod +x codeql-build-java.sh
           
           echo "=== Creating Java database ==="

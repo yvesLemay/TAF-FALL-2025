@@ -3,6 +3,8 @@
 
 # Test Automation Framework
 
+# Testing CI/CD avec PR
+
 TAF est un projet de R&amp;D de cadriciel d’automatisation de test
 
 

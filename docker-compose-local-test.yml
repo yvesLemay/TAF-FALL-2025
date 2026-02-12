@@ -91,7 +91,7 @@ services:
       - "8080:8080"
     environment:
       PORT_GATEWAY: 8080
-      EUREKA_HOST: registry
+      EUREKA_HOST: taf-registry
       EUREKA_PORT: 8761
       EUREKA_USERNAME: eureka
       EUREKA_PASSWORD: eureka
@@ -137,12 +137,12 @@ services:
     networks:
       - taf-local
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: ["CMD-SHELL", "code=$$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8080/actuator/health || true); test \"$$code\" = \"200\" -o \"$$code\" = \"401\""]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
-
+  
   # ============================================
   # USER SERVICE
   # ============================================
@@ -174,7 +174,7 @@ services:
     networks:
       - taf-local
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      test: ["CMD-SHELL", "code=$$(curl -sS -o /dev/null -w '%{http_code}' http://localhost:8080/actuator/health || true); test \"$$code\" = \"200\" -o \"$$code\" = \"401\""]
       interval: 30s
       timeout: 10s
       retries: 3

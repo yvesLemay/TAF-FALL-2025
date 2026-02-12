@@ -297,18 +297,7 @@ PYTHON_EOF
       }
     }
   }
-  post {
-    always {
-      archiveArtifacts artifacts: 'codeql.zip, codeql-*.sarif', allowEmptyArchive: true
-    }
-    success {
-      echo "✅ Pipeline completed successfully - CodeQL quality gate passed"
-    }
-    failure {
-      echo "❌ Pipeline failed - Check CodeQL quality gate results above and fix issues before merging to main/master/production"
-    }
-  }
-}
+
 
 stage('Deploy to TAF (A - minimal)') {
   when { branch 'main' }
@@ -322,16 +311,27 @@ stage('Deploy to TAF (A - minimal)') {
       chmod 700 /var/jenkins_home/.ssh
       ssh-keyscan -H "${TAF_HOST}" >> /var/jenkins_home/.ssh/known_hosts
 
-      ssh ${TAF_USER}@${TAF_HOST} "
+      ssh ${TAF_USER}@${TAF_HOST} '
         set -eux
         cd ~/TAF-FALL-2025
-        git pull
-        if [ -f docker-compose-local-test.yml ]; then
-          docker compose -f docker-compose-local-test.yml up -d --build
-        else
-          docker compose up -d --build
-        fi
-      "
+        git fetch --all --prune
+        git checkout main
+        git reset --hard origin/main
+	docker compose -f docker-compose-local-test.yml up -d --build
+      '
     '''
+  }
+}
+
+  post {
+    always {
+      archiveArtifacts artifacts: 'codeql.zip, codeql-*.sarif', allowEmptyArchive: true
+    }
+    success {
+      echo "✅ Pipeline completed successfully - CodeQL quality gate passed"
+    }
+    failure {
+      echo "❌ Pipeline failed - Check CodeQL quality gate results above and fix issues before merging to main/master/production"
+    }
   }
 }
